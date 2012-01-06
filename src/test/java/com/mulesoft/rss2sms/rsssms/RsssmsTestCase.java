@@ -7,6 +7,10 @@
  */
 package com.mulesoft.rss2sms.rsssms;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import org.mule.api.MuleMessage;
 import org.mule.api.client.MuleClient;
 import org.mule.tck.junit4.FunctionalTestCase;
@@ -14,16 +18,10 @@ import org.mule.transport.NullPayload;
 
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-
 public class RsssmsTestCase extends FunctionalTestCase
 {
     protected String getConfigResources()
     {
-        //TODO You'll need to edit this file to make the test applicable to your module
         return "rsssms-functional-test-config.xml";
     }
 
@@ -38,7 +36,6 @@ public class RsssmsTestCase extends FunctionalTestCase
         assertNull(result.getExceptionPayload());
         assertFalse(result.getPayload() instanceof NullPayload);
 
-        //TODO Assert the correct data has been received
         assertEquals("some data Received", result.getPayloadAsString());
     }
 }

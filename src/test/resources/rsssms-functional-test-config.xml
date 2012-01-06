@@ -30,14 +30,37 @@
         http://www.mulesoft.org/schema/mule/xml http://www.mulesoft.org/schema/mule/xml/3.2/mule-xml.xsd
         http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
 
-    <!--
-    TODO: You can define a test configuration here then from the RsssmsTestCase you can fire events into
-    Mule (using the MuleClient) and then assert the results.
-    -->
+
+    <spring:bean id="jdbcDataSource"
+                 class="org.enhydra.jdbc.standard.StandardDataSource"
+                 destroy-method="shutdown">
+        <spring:property name="driverName" value="com.mysql.jdbc.Driver"/>
+        <spring:property name="url" value="jdbc:mysql://localhost:33060/rss2sms?"/>
+        <spring:property name="user" value="imcuser"/>
+        <spring:property name="password" value="1Mule4you"/>
+    </spring:bean>
+
+    <jdbc:connector name="jdbcConnector" pollingFrequency="1000" dataSource-ref="jdbcDataSource" queryTimeout="3000">
+        <jdbc:query key="insertIdempotency"
+                    value="INSERT INTO STORE(ID, VALUE) VALUES(?, ?)"/>
+        <jdbc:query key="selectIdempotency"
+                    value="SELECT ID, VALUE FROM STORE WHERE ID = ?"/>
+        <jdbc:query key="deleteIdempotency"
+                    value="DELETE FROM STORE WHERE ID = ?"/>
+    </jdbc:connector>
+
     <flow name="main">
         <vm:inbound-endpoint path="in"/>
 
-        <!-- TODO add your service component here. This can also be a Spring bean using <spring-object bean="name"/> -->
+        <idempotent-message-filter idExpression="#[payload]" valueExpression="#[payload]" throwOnUnaccepted="false">
+            <jdbc:object-store
+                    jdbcConnector-ref="jdbcConnector"
+                    name="jdbcObjectStore"
+                    insertQueryKey="insertIdempotency"
+                    selectQueryKey="selectIdempotency"
+                    deleteQueryKey="deleteIdempotency"/>
+        </idempotent-message-filter>
+
         <test:component appendString=" Received"/>
 
         <vm:outbound-endpoint path="out"/>
