@@ -1,19 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mule xmlns="http://www.mulesoft.org/schema/mule/core"
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-      xmlns:spring="http://www.springframework.org/schema/beans"
-      xmlns:file="http://www.mulesoft.org/schema/mule/file"
-      xmlns:http="http://www.mulesoft.org/schema/mule/http"
-      xmlns:jdbc="http://www.mulesoft.org/schema/mule/jdbc"
-      xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
-      xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
-      xmlns:client="http://www.mulesoft.org/schema/mule/client"
-      xmlns:cxf="http://www.mulesoft.org/schema/mule/cxf"
-      xmlns:management="http://www.mulesoft.org/schema/mule/management"
-      xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
-      xmlns:sxc="http://www.mulesoft.org/schema/mule/sxc"
-      xmlns:mule-xml="http://www.mulesoft.org/schema/mule/xml"
-    xsi:schemaLocation="
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:spring="http://www.springframework.org/schema/beans" xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:jdbc="http://www.mulesoft.org/schema/mule/jdbc"
+	xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:client="http://www.mulesoft.org/schema/mule/client" xmlns:cxf="http://www.mulesoft.org/schema/mule/cxf"
+	xmlns:management="http://www.mulesoft.org/schema/mule/management"
+	xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
+	xmlns:rss="http://www.mulesoft.org/schema/mule/rss"
+	xmlns:twilio="http://www.mulesoft.org/schema/mule/twilio"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:sxc="http://www.mulesoft.org/schema/mule/sxc" xmlns:mule-xml="http://www.mulesoft.org/schema/mule/xml"
+	xsi:schemaLocation="
         http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/3.2/mule.xsd
         http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/3.2/mule-file.xsd
         http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/3.2/mule-http.xsd
@@ -24,20 +21,38 @@
         http://www.mulesoft.org/schema/mule/cxf http://www.mulesoft.org/schema/mule/cxf/3.2/mule-cxf.xsd
         http://www.mulesoft.org/schema/mule/management http://www.mulesoft.org/schema/mule/management/3.2/mule-management.xsd
         http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/3.2/mule-scripting.xsd
+        http://www.mulesoft.org/schema/mule/rss http://www.mulesoft.org/schema/mule/rss/3.2/mule-rss.xsd
         http://www.mulesoft.org/schema/mule/sxc http://www.mulesoft.org/schema/mule/sxc/3.2/mule-sxc.xsd
         http://www.mulesoft.org/schema/mule/xml http://www.mulesoft.org/schema/mule/xml/3.2/mule-xml.xsd
-        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+        http://www.mulesoft.org/schema/mule/twilio http://www.mulesoft.org/schema/mule/twilio/1.0/mule-twilio.xsd
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd">
 
-    <description>
-    rss2sms gateway
-    </description>
+	<description>
+		rss2sms gateway
+	</description>
+	
+	<context:property-placeholder location="classpath:config.properties"/>
+	
+	<twilio:config name="twilio-default" accountSid="${twilio.account.sid}" authToken="${twilio.auth.token}"/>
 
-    <flow name="main">
-        <vm:inbound-endpoint path="in" exchange-pattern="request-response"/>
+	<flow name="rss2sms">
+		<poll frequency="10000">
+			<http:outbound-endpoint address="http://bamboo.mulesoft.org/rss/createAllBuildsRssFeed.action?feedType=rssFailed&amp;buildKey=MULE3X-MULE3XJDK6" />
+		</poll>
+		<rss:feed-splitter />
 
-        <!-- TODO add your service component here. This can also be a Spring bean using <spring-object bean="name"/> -->
-        <echo-component/>
+		<!-- add idempotency -->
+		<idempotent-message-filter idExpression="#[groovy:payload.uri]" />
 
-        <vm:outbound-endpoint path="out"/>
-    </flow>
+		<logger level="ERROR" message="rss: #[groovy:payload.title]" />
+		<!-- 
+		<twilio:send-sms-message config-ref="twilio-default"
+                                 accountSid="${twilio.account.sid}"
+                                 from="${twilio.phone.number}"
+                                 to="#[string:...]"
+                                 body="#[groovy:payload.title]"/>
+		 -->
+	</flow>
+
 </mule>
